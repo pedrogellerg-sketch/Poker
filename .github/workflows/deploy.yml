@@ -53,6 +53,11 @@ jobs:
         run: cp dist/index.html dist/404.html
 
       - uses: actions/configure-pages@v5
+        # Provisiona o Pages na primeira publicação. Sem isto a action só
+        # procura um site já existente e falha com 404 num repositório novo,
+        # exigindo ativar o Pages à mão nas configurações antes do 1º deploy.
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
