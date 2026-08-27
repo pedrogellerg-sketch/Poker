@@ -1,0 +1,1388 @@
+/*
+  Design tokens do módulo de pôquer.
+
+  Tudo aqui vive sob `.pk` porque este módulo tem paleta própria, diferente do
+  resto do app: fundo tinta, texto pergaminho, ouro só onde há ficha.
+
+  A direção das telas de estudo é "caderno de anotações de quem estuda o jogo" —
+  sem neon, sem ornamento. **A mesa do torneio é a exceção deliberada**: ali
+  vale o feltro verde e a organização de um cliente de pôquer de verdade, porque
+  é o ambiente em que o usuário vai jogar no PokerStars. Treinar a leitura de
+  mesa num layout que não existe em lugar nenhum custa transferência.
+
+  Classes com prefixo `pk-` em vez de utilitários: a paleta não é a do tema
+  Tailwind do app hospedeiro, e escrever `bg-[var(--pk-surface)]` cinquenta
+  vezes seria pior de ler do que CSS comum.
+*/
+
+@import '@fontsource-variable/fraunces';
+
+.pk {
+  --pk-ink: #14171f;
+  --pk-surface: #1c2130;
+  --pk-surface-2: #242a3d;
+  --pk-surface-3: #2b3247;
+  --pk-parchment: #f0ead8;
+  --pk-red: #b5473f;
+  --pk-gold: #c9a24b;
+  --pk-green: #5a8f6b;
+  --pk-muted: #7c8494;
+  --pk-border: #2e3548;
+
+  --pk-display: 'Fraunces Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --pk-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --pk-mono: ui-monospace, 'SF Mono', 'IBM Plex Mono', Menlo, Consolas, monospace;
+
+  min-height: 100dvh;
+  background: var(--pk-ink);
+  color: var(--pk-parchment);
+  font-family: var(--pk-sans);
+  /* Textura de papel milimetrado: a "mesa de estudos" do módulo. */
+  background-image:
+    linear-gradient(rgba(240, 234, 216, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 234, 216, 0.022) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.pk *,
+.pk *::before,
+.pk *::after {
+  box-sizing: border-box;
+}
+
+.pk :focus-visible {
+  outline: 2px solid var(--pk-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------- estrutura */
+
+.pk-shell {
+  margin: 0 auto;
+  max-width: 480px;
+  padding: 0 16px calc(84px + env(safe-area-inset-bottom));
+}
+
+.pk-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top)) 0 12px;
+  background: linear-gradient(var(--pk-ink) 78%, transparent);
+}
+
+.pk-topbar h1 {
+  margin: 0;
+  font-family: var(--pk-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.pk-topbar p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--pk-muted);
+}
+
+.pk-back {
+  margin-left: auto;
+  border: 1px solid var(--pk-border);
+  background: transparent;
+  color: var(--pk-muted);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pk-back:hover {
+  color: var(--pk-parchment);
+  border-color: var(--pk-muted);
+}
+
+/* -------------------------------------------------------------- navegação */
+
+.pk-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 30;
+  border-top: 1px solid var(--pk-border);
+  background: color-mix(in srgb, var(--pk-ink) 92%, transparent);
+  backdrop-filter: blur(14px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pk-nav-inner {
+  margin: 0 auto;
+  max-width: 480px;
+  display: grid;
+  /* Uma coluna por aba: com menos colunas que abas, a última quebra para uma
+     segunda linha e a barra deixa de parecer uma barra. */
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  padding: 6px 4px 4px;
+}
+
+.pk-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--pk-muted);
+  padding: 6px 1px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 0;
+  transition: color 0.15s ease;
+}
+
+.pk-tab span:first-child {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.pk-tab-label {
+  font-size: 9px;
+  letter-spacing: -0.01em;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk-tab[aria-current='true'] {
+  color: var(--pk-parchment);
+  background: var(--pk-surface-2);
+}
+
+.pk-tab.is-red span:first-child {
+  color: var(--pk-red);
+}
+
+.pk-tab.is-black span:first-child {
+  color: var(--pk-parchment);
+}
+
+/* ------------------------------------------------------------------ ficha */
+
+/*
+  A ficha é o único ornamento do módulo, e é desenhada em CSS: um gradiente
+  cônico com listras de ouro sobre o fundo, exatamente como a borda de uma
+  ficha de mesa. Serve de logo e de ícone da aba do torneio.
+*/
+.pk-chip {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--pk-gold) 0 10deg,
+    var(--pk-surface-3) 10deg 45deg,
+    var(--pk-gold) 45deg 55deg,
+    var(--pk-surface-3) 55deg 90deg,
+    var(--pk-gold) 90deg 100deg,
+    var(--pk-surface-3) 100deg 135deg,
+    var(--pk-gold) 135deg 145deg,
+    var(--pk-surface-3) 145deg 180deg,
+    var(--pk-gold) 180deg 190deg,
+    var(--pk-surface-3) 190deg 225deg,
+    var(--pk-gold) 225deg 235deg,
+    var(--pk-surface-3) 235deg 270deg,
+    var(--pk-gold) 270deg 280deg,
+    var(--pk-surface-3) 280deg 315deg,
+    var(--pk-gold) 315deg 325deg,
+    var(--pk-surface-3) 325deg 360deg
+  );
+  flex: none;
+}
+
+.pk-chip::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--pk-ink);
+  border: 1px solid color-mix(in srgb, var(--pk-gold) 55%, transparent);
+}
+
+.pk-chip.is-small {
+  width: 18px;
+  height: 18px;
+}
+
+.pk-chip.is-small::after {
+  inset: 3px;
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.pk-card {
+  border: 1px solid var(--pk-border);
+  background: var(--pk-surface);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.pk-card + .pk-card {
+  margin-top: 10px;
+}
+
+.pk-card h2,
+.pk-card h3 {
+  margin: 0 0 6px;
+  font-family: var(--pk-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pk-card h2 {
+  font-size: 16px;
+}
+
+.pk-card h3 {
+  font-size: 14px;
+}
+
+.pk-muted {
+  color: var(--pk-muted);
+}
+
+.pk-note {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--pk-muted);
+  margin: 0;
+}
+
+.pk-num {
+  font-family: var(--pk-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pk-muted);
+  margin: 0 0 8px;
+}
+
+/* --------------------------------------------------------------- controles */
+
+.pk-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  border: 1px solid var(--pk-border);
+  background: var(--pk-surface-2);
+  color: var(--pk-parchment);
+  padding: 12px 14px;
+  min-height: 44px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.pk-btn:hover {
+  background: var(--pk-surface-3);
+}
+
+.pk-btn:active {
+  transform: scale(0.985);
+}
+
+.pk-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pk-btn.is-primary {
+  background: var(--pk-gold);
+  border-color: var(--pk-gold);
+  color: #1a1608;
+  font-weight: 600;
+}
+
+.pk-btn.is-primary:hover {
+  background: color-mix(in srgb, var(--pk-gold) 88%, white);
+}
+
+.pk-btn.is-danger {
+  border-color: color-mix(in srgb, var(--pk-red) 45%, transparent);
+  color: color-mix(in srgb, var(--pk-red) 82%, var(--pk-parchment));
+}
+
+.pk-btn.is-ghost {
+  background: transparent;
+}
+
+/* Alternativa certa e alternativa errada, depois que o usuário respondeu. */
+.pk-btn.pk-opt-right {
+  border-color: color-mix(in srgb, var(--pk-green) 55%, transparent);
+  background: color-mix(in srgb, var(--pk-green) 16%, var(--pk-surface-2));
+}
+
+.pk-btn.pk-opt-wrong {
+  border-color: color-mix(in srgb, var(--pk-red) 55%, transparent);
+  background: color-mix(in srgb, var(--pk-red) 16%, var(--pk-surface-2));
+}
+
+.pk-btn:disabled.pk-opt-right,
+.pk-btn:disabled.pk-opt-wrong {
+  opacity: 1;
+}
+
+.pk-btn-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+}
+
+.pk-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px;
+  color: var(--pk-parchment);
+  background: var(--pk-surface-2);
+  border: 1px solid var(--pk-border);
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.pk-input::placeholder {
+  color: var(--pk-muted);
+}
+
+.pk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pk-pill {
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--pk-border);
+  background: transparent;
+  color: var(--pk-muted);
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.pk-pill[aria-pressed='true'],
+.pk-pill.is-on {
+  background: var(--pk-surface-3);
+  color: var(--pk-parchment);
+  border-color: var(--pk-muted);
+}
+
+/* ------------------------------------------------------------ carta de baralho */
+
+.pk-playing-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 56px;
+  border-radius: 7px;
+  background: var(--pk-parchment);
+  color: #1b1b1b;
+  border: 1px solid #cdc4ab;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  font-family: var(--pk-display);
+  font-weight: 600;
+  line-height: 1;
+  flex: none;
+  user-select: none;
+}
+
+.pk-playing-card.is-red {
+  color: var(--pk-red);
+}
+
+/* lg — a carta que se lê: mão do herói no treino e board da mesa. */
+.pk-playing-card.is-lg .pk-pc-rank {
+  font-size: 19px;
+}
+.pk-playing-card.is-lg .pk-pc-suit {
+  font-size: 15px;
+  margin-top: 2px;
+}
+
+.pk-playing-card.is-md {
+  width: 34px;
+  height: 48px;
+}
+.pk-playing-card.is-md .pk-pc-rank {
+  font-size: 16px;
+}
+.pk-playing-card.is-md .pk-pc-suit {
+  font-size: 12px;
+  margin-top: 1px;
+}
+
+.pk-playing-card.is-sm {
+  width: 30px;
+  height: 42px;
+}
+.pk-playing-card.is-sm .pk-pc-rank {
+  font-size: 14px;
+}
+.pk-playing-card.is-sm .pk-pc-suit {
+  font-size: 11px;
+}
+
+/* xs — carta de adversário na mesa: cabe na placa e não escapa do feltro. */
+.pk-playing-card.is-xs {
+  width: 21px;
+  height: 29px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+}
+.pk-playing-card.is-xs .pk-pc-rank {
+  font-size: 11px;
+}
+.pk-playing-card.is-xs .pk-pc-suit {
+  font-size: 9px;
+}
+
+.pk-playing-card.is-back {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--pk-surface-3) 0 4px,
+    var(--pk-surface-2) 4px 8px
+  );
+  border-color: var(--pk-border);
+  color: transparent;
+}
+
+.pk-hand {
+  display: flex;
+  gap: 5px;
+}
+
+.pk-deal-in {
+  animation: pk-deal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pk-deal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------- feedback */
+
+.pk-verdict {
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid;
+  animation: pk-fade 0.25s ease both;
+}
+
+.pk-verdict.is-right {
+  border-color: color-mix(in srgb, var(--pk-green) 45%, transparent);
+  background: color-mix(in srgb, var(--pk-green) 12%, transparent);
+}
+
+.pk-verdict.is-wrong {
+  border-color: color-mix(in srgb, var(--pk-red) 45%, transparent);
+  background: color-mix(in srgb, var(--pk-red) 12%, transparent);
+}
+
+.pk-verdict h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+@keyframes pk-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pk-score {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--pk-muted);
+}
+
+.pk-score b {
+  font-family: var(--pk-mono);
+  color: var(--pk-parchment);
+  font-weight: 600;
+}
+
+.pk-steps {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--pk-mono);
+  font-size: 11.5px;
+  color: var(--pk-muted);
+}
+
+.pk-steps li {
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--pk-border);
+}
+
+.pk-steps li:last-child {
+  border-bottom: 0;
+  color: var(--pk-parchment);
+}
+
+/* ------------------------------------------------------------------ mesa */
+
+/*
+  A mesa segue a organização de um cliente de pôquer de verdade: oval de feltro,
+  assentos em volta encostando no trilho, botão do dealer girando, fichas
+  apostadas entre o assento e o centro, pote e cartas comunitárias no meio.
+
+  Não é imitação por estética. Essa disposição é o que torna a posição legível:
+  "quem fala depois de mim" é uma pergunta espacial, e numa lista vertical de
+  assentos ela não tem resposta visual nenhuma. O feltro verde entra junto
+  porque é o fundo com que o jogador vai conviver no site de verdade — treinar
+  em outro contexto visual custa transferência.
+*/
+.pk-table {
+  --pk-felt: #16452f;
+  --pk-felt-edge: #0f3222;
+  --pk-rail: #2b2118;
+
+  border: 1px solid var(--pk-border);
+  border-radius: 16px;
+  background: var(--pk-surface);
+  padding: 10px;
+}
+
+.pk-table-area {
+  position: relative;
+  width: 100%;
+  /* A placa do herói desce até a borda inferior da área; sem esta folga ela
+     encosta no log logo abaixo. */
+  margin-bottom: 10px;
+}
+
+/* O oval: feltro com vinheta e o trilho em volta. */
+.pk-felt {
+  position: absolute;
+  inset: 40px 10px 44px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      70% 70% at 50% 38%,
+      color-mix(in srgb, var(--pk-felt) 88%, white 12%),
+      var(--pk-felt) 55%,
+      var(--pk-felt-edge) 100%
+    );
+  border: 6px solid var(--pk-rail);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.5),
+    inset 0 8px 26px rgb(0 0 0 / 0.35),
+    0 10px 26px -14px rgb(0 0 0 / 0.9);
+}
+
+/* Miolo: pote em cima, cartas comunitárias embaixo. */
+.pk-felt-center {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.pk-pot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgb(0 0 0 / 0.34);
+  border: 1px solid rgb(255 255 255 / 0.09);
+  border-radius: 999px;
+  padding: 3px 11px;
+}
+
+.pk-pot-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.55);
+}
+
+.pk-pot-value {
+  font-family: var(--pk-mono);
+  font-size: 14px;
+  color: var(--pk-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-board {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+}
+
+.pk-board-empty {
+  font-size: 10.5px;
+  color: rgb(255 255 255 / 0.4);
+  letter-spacing: 0.06em;
+}
+
+/* ---- assentos ---- */
+
+.pk-seat {
+  position: absolute;
+  width: 84px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: opacity 0.2s ease;
+}
+
+.pk-seat.is-folded {
+  opacity: 0.4;
+}
+
+.pk-seat-cards {
+  display: flex;
+  gap: 2px;
+  min-height: 29px;
+  align-items: flex-end;
+  /* As cartas encostam na placa, como no cliente: elas saem de trás dela. */
+  margin-bottom: -4px;
+  z-index: 1;
+}
+
+/* A placa de nome, como no cliente: nome em cima, stack embaixo. */
+.pk-plate {
+  width: 100%;
+  border-radius: 8px;
+  background: linear-gradient(#232a3a, #171d29);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+  padding: 3px 5px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.pk-seat.is-turn .pk-plate {
+  border-color: var(--pk-gold);
+  box-shadow:
+    0 0 0 1px var(--pk-gold),
+    0 0 14px -2px color-mix(in srgb, var(--pk-gold) 70%, transparent);
+}
+
+.pk-seat.is-hero .pk-plate {
+  background: linear-gradient(#2c3348, #1d2331);
+}
+
+/* O assento do herói é mais largo porque as cartas dele são as grandes: são as
+   únicas que ele precisa ler a cada decisão. E ele é preso à borda de baixo, e
+   não centrado num ponto do anel — por isso translada só na horizontal. */
+.pk-seat.is-hero {
+  width: 96px;
+  transform: translate(-50%, 0);
+}
+
+.pk-seat.is-hero .pk-seat-cards {
+  min-height: 56px;
+}
+
+.pk-plate-name {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--pk-parchment);
+}
+
+.pk-plate-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pk-plate-pos {
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pk-muted);
+}
+
+.pk-plate-stack {
+  font-family: var(--pk-mono);
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--pk-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-plate.is-out .pk-plate-stack,
+.pk-plate.is-out .pk-plate-name {
+  color: var(--pk-muted);
+}
+
+/* Última ação, flutuando junto da placa como no cliente. */
+.pk-seat-say {
+  position: absolute;
+  top: -9px;
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--pk-ink);
+  border: 1px solid var(--pk-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  color: var(--pk-parchment);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+}
+
+.pk-seat-say.is-fold {
+  color: var(--pk-muted);
+}
+
+/* Nos assentos de cima o balão desce: para cima ele escaparia da mesa. Desce o
+   bastante para não ficar montado na própria placa. */
+.pk-seat.is-upper .pk-seat-say,
+.pk-seat.is-upper .pk-allin {
+  top: auto;
+  bottom: -15px;
+}
+
+.pk-seat-say.is-aggro {
+  border-color: color-mix(in srgb, var(--pk-red) 60%, transparent);
+  color: color-mix(in srgb, var(--pk-red) 75%, var(--pk-parchment));
+}
+
+/* Botão do dealer — o disco branco que gira a cada mão. */
+.pk-dealer {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #d9d3c4);
+  color: #1b1b1b;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.55);
+  z-index: 4;
+}
+
+/* Fichas apostadas, entre o assento e o pote. */
+.pk-chips-bet {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgb(0 0 0 / 0.42);
+  border-radius: 999px;
+  padding: 1px 7px 1px 3px;
+  z-index: 3;
+}
+
+.pk-chips-bet .pk-bet-value {
+  font-family: var(--pk-mono);
+  font-size: 10px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pilha de fichas desenhada: três discos sobrepostos. */
+.pk-chip-stack {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.pk-chip-stack span {
+  position: absolute;
+  left: 0;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px dotted rgb(255 255 255 / 0.75);
+  box-sizing: border-box;
+}
+
+.pk-chip-stack span:nth-child(1) {
+  bottom: 0;
+  background: var(--pk-red);
+}
+.pk-chip-stack span:nth-child(2) {
+  bottom: 2px;
+  background: #3f6fb5;
+}
+.pk-chip-stack span:nth-child(3) {
+  bottom: 4px;
+  background: var(--pk-gold);
+}
+
+/* Selo de all-in sobre o assento. */
+.pk-allin {
+  position: absolute;
+  top: -9px;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--pk-red);
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 6px;
+  z-index: 4;
+}
+
+.pk-badge {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--pk-border);
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--pk-muted);
+}
+
+.pk-badge.is-gold {
+  border-color: color-mix(in srgb, var(--pk-gold) 50%, transparent);
+  color: var(--pk-gold);
+}
+
+.pk-bet {
+  font-family: var(--pk-mono);
+  font-size: 11px;
+  color: var(--pk-parchment);
+  background: var(--pk-surface-3);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* ---- controle de aposta ---- */
+
+.pk-raise {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--pk-border);
+  border-radius: 11px;
+  background: var(--pk-surface-2);
+}
+
+.pk-raise-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pk-raise-value {
+  font-family: var(--pk-mono);
+  font-size: 16px;
+  color: var(--pk-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pk-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pk-slider::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--pk-surface-3);
+}
+
+.pk-slider::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--pk-surface-3);
+}
+
+/* 22px de polegar: alvo confortável de arrastar com o dedo. */
+.pk-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0e2b8, var(--pk-gold));
+  border: 1px solid #7a6021;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.5);
+}
+
+.pk-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0e2b8, var(--pk-gold));
+  border: 1px solid #7a6021;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.5);
+}
+
+/* Três botões na largura do celular: o texto tem que caber numa linha só. */
+.pk-actions .pk-btn-row .pk-btn {
+  font-size: 13px;
+  padding: 12px 6px;
+  white-space: nowrap;
+}
+
+/* Botões de ação com as cores do cliente — mas cada um com rótulo escrito,
+   porque cor sozinha não é informação acessível. */
+.pk-btn.is-fold {
+  background: var(--pk-surface-3);
+  border-color: var(--pk-border);
+  color: var(--pk-parchment);
+}
+
+.pk-btn.is-call {
+  background: #2e7d55;
+  border-color: #2e7d55;
+  color: #f2fbf6;
+  font-weight: 600;
+}
+
+.pk-btn.is-call:hover {
+  background: #359463;
+}
+
+.pk-btn.is-raise {
+  background: #b5473f;
+  border-color: #b5473f;
+  color: #fff5f3;
+  font-weight: 600;
+}
+
+.pk-btn.is-raise:hover {
+  background: #c8534a;
+}
+
+.pk-log {
+  margin: 10px 0 0;
+  padding: 10px;
+  list-style: none;
+  border: 1px solid var(--pk-border);
+  border-radius: 11px;
+  background: var(--pk-ink);
+  max-height: 132px;
+  overflow-y: auto;
+  font-size: 11.5px;
+  font-family: var(--pk-mono);
+  color: var(--pk-muted);
+}
+
+.pk-log li {
+  padding: 2px 0;
+}
+
+.pk-log li.is-street {
+  color: var(--pk-gold);
+}
+
+.pk-log li.is-result {
+  color: var(--pk-parchment);
+}
+
+.pk-actions {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--pk-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pk-surface) 96%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+/* --------------------------------------------------------------- listas */
+
+.pk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pk-list li {
+  border-bottom: 1px solid var(--pk-border);
+  padding: 11px 0;
+}
+
+.pk-list li:last-child {
+  border-bottom: 0;
+}
+
+.pk-term {
+  font-family: var(--pk-display);
+  font-size: 14.5px;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+
+.pk-def {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pk-muted);
+}
+
+.pk-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pk-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pk-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--pk-border);
+}
+
+.pk-rank-row:last-child {
+  border-bottom: 0;
+}
+
+.pk-rank-index {
+  font-family: var(--pk-mono);
+  font-size: 11px;
+  color: var(--pk-gold);
+  width: 18px;
+  flex: none;
+}
+
+/* ------------------------------------------------------ mãos importadas */
+
+.pk-hand-row {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--pk-border);
+  padding: 11px 0;
+  cursor: pointer;
+  color: inherit;
+  display: block;
+}
+
+.pk-hand-row:hover {
+  background: color-mix(in srgb, var(--pk-surface-2) 60%, transparent);
+}
+
+.pk-net {
+  font-family: var(--pk-mono);
+  font-size: 13px;
+}
+
+.pk-net.is-up {
+  color: var(--pk-green);
+}
+
+.pk-net.is-down {
+  color: var(--pk-red);
+}
+
+.pk-flag {
+  display: inline-block;
+  font-size: 10px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  border: 1px solid;
+}
+
+.pk-flag.is-erro {
+  color: var(--pk-red);
+  border-color: color-mix(in srgb, var(--pk-red) 45%, transparent);
+}
+
+.pk-flag.is-atencao {
+  color: var(--pk-gold);
+  border-color: color-mix(in srgb, var(--pk-gold) 45%, transparent);
+}
+
+.pk-flag.is-acerto {
+  color: var(--pk-green);
+  border-color: color-mix(in srgb, var(--pk-green) 45%, transparent);
+}
+
+.pk-drop {
+  border: 1px dashed var(--pk-border);
+  border-radius: 14px;
+  padding: 22px 16px;
+  text-align: center;
+  background: var(--pk-surface);
+  transition: border-color 0.15s ease;
+}
+
+.pk-drop.is-over {
+  border-color: var(--pk-gold);
+}
+
+.pk-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pk-surface-3);
+  overflow: hidden;
+}
+
+.pk-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--pk-gold);
+}
+
+.pk-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.pk-stat-value {
+  font-family: var(--pk-mono);
+  font-size: 17px;
+  display: block;
+}
+
+.pk-stat-label {
+  font-size: 10px;
+  color: var(--pk-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------------- gráfico */
+
+.pk-chart-plot {
+  position: relative;
+  margin-top: 4px;
+}
+
+.pk-chart-cols {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  /* 2px de superfície entre marcas vizinhas: separa sem inventar borda. */
+  gap: 2px;
+}
+
+.pk-chart-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  /* O alvo de toque é a coluna inteira, bem maior que a barra. */
+  display: flex;
+  align-items: flex-end;
+}
+
+.pk-chart-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, var(--pk-surface-3) 45%, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pk-chart-fill {
+  display: block;
+  width: 100%;
+  background: color-mix(in srgb, var(--pk-gold) 62%, var(--pk-surface-3));
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s var(--pk-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.pk-chart-col.is-active .pk-chart-fill {
+  background: var(--pk-gold);
+}
+
+/* Período sem dado: vazado, para não se confundir com zero. */
+.pk-chart-empty {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--pk-muted) 55%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.pk-chart-ref {
+  position: absolute;
+  inset-inline: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--pk-parchment) 22%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* À esquerda, onde estaria o eixo: à direita o rótulo cai justo sobre a barra
+   mais recente, que é a que mais se olha. */
+.pk-chart-ref span {
+  position: absolute;
+  left: 0;
+  top: -14px;
+  font-size: 9.5px;
+  color: var(--pk-muted);
+  background: var(--pk-surface);
+  padding: 0 3px;
+}
+
+.pk-chart-axis {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.pk-chart-axis span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 9.5px;
+  color: var(--pk-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk-chart-axis span.is-active {
+  color: var(--pk-parchment);
+}
+
+.pk-chart-caption {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--pk-muted);
+  line-height: 1.5;
+}
+
+.pk-chart-caption strong {
+  color: var(--pk-parchment);
+  font-size: 14px;
+}
+
+.pk-delta {
+  font-family: var(--pk-mono);
+  font-size: 11px;
+}
+
+.pk-delta.is-up {
+  color: var(--pk-green);
+}
+
+.pk-delta.is-down {
+  color: var(--pk-red);
+}
+
+.pk-table-view {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.pk-table-view th,
+.pk-table-view td {
+  text-align: right;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--pk-border);
+}
+
+.pk-table-view th:first-child,
+.pk-table-view td:first-child {
+  text-align: left;
+}
+
+.pk-table-view th {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pk-muted);
+  font-weight: 500;
+}
+
+.pk-table-view td {
+  font-family: var(--pk-mono);
+  color: var(--pk-parchment);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-deal-in,
+  .pk-verdict {
+    animation: none;
+  }
+
+  .pk-chart-fill {
+    transition: none;
+  }
+}
